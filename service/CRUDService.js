@@ -9,9 +9,23 @@ const createUser = async (firstname, lastname, email, sdt, password) => {
     );
 };
 
+const createVerifyCode = async (email, verifyCode) => {
+    const [results, fields] = await connection.query(
+        'INSERT INTO VerifyCode (email , verifycode) VALUES (?, ?)',
+        [email, verifyCode]
+    );
+};
+
 const findUserByEmail = async (email) => {
     const [results, fields] = await connection.query(
         'SELECT * FROM Users WHERE email = ?',
+        [email]
+    );
+    return results;
+}
+const findVerifyCodeByEmail = async (email) => {
+    const [results, fields] = await connection.query(
+        'SELECT * FROM VerifyCode WHERE email = ?',
         [email]
     );
     return results;
@@ -29,9 +43,15 @@ const updatePassword = async (newpassword, email) => {
         [newpassword, email]
     );
 }
+const updateVerifyCode = async (email, verifycode) => {
+    const [results, fields] = await connection.query(
+        'UPDATE VerifyCode SET verifycode = ? WHERE email = ?',
+        [verifycode, email]
+    );
+}
 
 function generateRandomString(length) {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const characters = '0123456789';
     let result = '';
     const charactersLength = characters.length;
     for (let i = 0; i < length; i++) {
@@ -78,10 +98,13 @@ async function isEmailValid(email) {
 
 module.exports = {
     createUser,
+    createVerifyCode,
     findUserByEmail,
+    findVerifyCodeByEmail,
     getAllUsers,
     generateRandomString,
     sendVerificationEmail,
     updatePassword,
+    updateVerifyCode,
     isEmailValid
 };

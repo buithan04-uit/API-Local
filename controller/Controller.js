@@ -1,11 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { createUser, findUserByEmail, getAllUsers, generateRandomString, sendVerificationEmail, updatePassword, isEmailValid } = require('../service/CRUDService');
-
-
-let verifyCodeGlobal = '';
-let emailGlobal = '';
-
+const { createUser, createVerifyCode, findUserByEmail, findVerifyCodeByEmail, getAllUsers, generateRandomString, sendVerificationEmail, updatePassword, updateVerifyCode, isEmailValid } = require('../service/CRUDService');
+const e = require('express');
 
 // Authentication routes
 const signUp = async (req, res) => {
@@ -13,7 +9,7 @@ const signUp = async (req, res) => {
     let newUser = req.body;
     const { valid, reason } = await isEmailValid(newUser.email);
     if (!valid) {
-        return res.status(201).json({ message: `Error2 : Invalid email address: ${reason}` });
+        return res.status(201).json({ message: 'Error2 : Invalid email address' });
     }
     let [results, fields] = await findUserByEmail(newUser.email);
     if (results == undefined) {
@@ -35,7 +31,6 @@ const logIn = async (req, res) => {
     }
     else {
         if (bcrypt.compareSync(userLogin.password, results.password)) {
-            emailGlobal = userLogin.email;
             res.status(200).json({ message: 'Login successfully' });
         }
         else {
@@ -51,15 +46,20 @@ const logOut = async (req, res) => {
 
 const forgetPassword = async (req, res) => {
     let emailUser = req.body;
-    emailGlobal = emailUser.email;
     let [results, fields] = await findUserByEmail(emailUser.email);
     if (results == undefined) {
         res.status(200).json({ message: 'Error: Email not exist' });
     }
     else {
         let varRandom = generateRandomString(6);
-        verifyCodeGlobal = varRandom;
         console.log(varRandom);
+        let [results, fields] = await findVerifyCodeByEmail(emailUser.email);
+        if (results == undefined) {
+            await createVerifyCode(emailUser.email, varRandom);
+        }
+        else {
+            await updateVerifyCode(emailUser.email, varRandom);
+        }
         res.status(200).json({ message: 'Verify Code was send to your email !' });
         sendVerificationEmail(emailUser.email, varRandom);
     }
@@ -68,17 +68,19 @@ const forgetPassword = async (req, res) => {
 
 const resendCode = async (req, res) => {
     let varRandom = generateRandomString(6);
-    verifyCodeGlobal = varRandom;
+    let Email = req.body;
     console.log(varRandom);
-    res.status(200).json({ message: 'Verify Code was send to your email !' });
-    sendVerificationEmail(emailUser.email, varRandom);
+    await updateVerifyCode(Email.email, varRandom);
+    res.status(200).json('Verify Code was Resend to your email !');
+    sendVerificationEmail(Email.email, varRandom);
 }
 
 const verifyCode = async (req, res) => {
     let verify = req.body;
-    if (verifyCodeGlobal === verify.code) {
+    let [results, fields] = await findVerifyCodeByEmail(verify.email);
+    console.log(results);
+    if (results.verifycode === verify.code) {
         res.status(200).json({ message: 'Verify Code is correct' });
-        verifyCodeGlobal = '';
     }
     else {
         res.status(200).json({ message: 'Error : Verify Code is incorrect' });
@@ -88,7 +90,7 @@ const verifyCode = async (req, res) => {
 const changeForget = async (req, res) => {
     let changePass = req.body;
     let hashedPassword = bcrypt.hashSync(changePass.newpassword)
-    await updatePassword(hashedPassword, emailGlobal);
+    await updatePassword(hashedPassword, changePass.email);
     res.status(200).json({ message: 'Change Password successfully' });
 };
 
@@ -119,14 +121,14 @@ const deleteAccount = async (req, res) => {
 
 const changePassword = async (req, res) => {
     let changePass = req.body;
-    let [results, fields] = await findUserByEmail(emailGlobal);
+    let [results, fields] = await findUserByEmail(changePass.email);
     if (bcrypt.compareSync(changePass.oldpassword, results.password)) {
         hashedPassword = bcrypt.hashSync(changePass.newpassword, 10);
-        await updatePassword(hashedPassword, emailGlobal);
+        await updatePassword(hashedPassword, changePass.email);
         res.status(200).json({ message: 'ChangePassword successfully' });
     }
     else {
-        res.status(200).json({ message: 'Password current incorrect' });
+        res.status(200).json({ message: 'Error : Password current incorrect' });
     }
 
 };

@@ -10,7 +10,7 @@ router.post('/auth/log_in', logIn);
 router.post('/auth/log_out', logOut);
 router.post('/auth/forget_password', forgetPassword);
 router.post('/auth/verify_code', verifyCode);
-router.get('/auth/forget_password/resend_code', resendCode);
+router.post('/auth/forget_password/resend_code', resendCode);
 router.post('/auth/change_forget', changeForget);
 
 // Dashboard route
